@@ -250,4 +250,6 @@ class Tokenizer:
             if t:
                 self.tokens.append(t)
 
+        self.tokens.append(Token(Tt.EOF, "", None, self.line))
+
         return self.tokens
