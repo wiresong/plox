@@ -1,12 +1,16 @@
+from .fun import Fun
+from .builtins import Clock
 from .env import Env
-from .errors import RuntimeError
+from .errors import ReturnError, RuntimeError
 from .tokenizer import Tt
 
 
 class Interpreter:
     def __init__(self, lox):
         self.lox = lox
-        self.env = Env()
+        self.g = Env()
+        self.g.define("clock", Clock())
+        self.env = self.g
 
     def is_truthy(self, expr):
         if expr is None:
@@ -50,6 +54,15 @@ class Interpreter:
             return -float(right)
         elif expr.operator.type == Tt.BANG:
             return not self.is_truthy(right)
+
+    def visit_call(self, expr):
+        callee = self.eval(expr.callee)
+        args = [self.eval(arg) for arg in expr.arguments]
+        if not hasattr(callee, "call"):
+            raise RuntimeError(expr.paren, "can only call functions or classes")
+        if len(args) != callee.arity():
+            raise RuntimeError(expr.paren, f"wrong argument count: expected {callee.arity()}, got {len(args)}")
+        return callee.call(self, args)
 
     def visit_variable(self, expr):
         return self.env.get(expr.name)
@@ -143,6 +156,12 @@ class Interpreter:
         while self.is_truthy(self.eval(stmt.condition)):
             self.eval(stmt.body)
 
+    def visit_return(self, stmt):
+        value = None
+        if stmt.value:
+            value = self.eval(stmt.value)
+        raise ReturnError(value)
+
     def visit_var(self, stmt):
         value = None
         if stmt.initializer is not None:
@@ -151,6 +170,10 @@ class Interpreter:
 
     def visit_expression(self, stmt):
         self.eval(stmt.expr)
+
+    def visit_function(self, stmt):
+        fun = Fun(stmt, self.env)
+        self.env.define(stmt.name.lexeme, fun)
 
     def interpret(self, statements):
         try:

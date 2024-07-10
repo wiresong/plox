@@ -1,5 +1,5 @@
-from .stmt import Block, Expression, If, Print, Var, While
-from .expr import Assign, Binary, Grouping, Literal, Logical, Unary, Variable
+from .stmt import Block, Expression, Function, If, Print, Return, Var, While
+from .expr import Assign, Binary, Call, Grouping, Literal, Logical, Unary, Variable
 from .errors import ParseError
 from .tokenizer import Tt
 
@@ -69,11 +69,31 @@ class Parser:
 
     def declaration(self):
         try:
+            if self.match(Tt.FUN):
+                return self.fun_declaration("function")
             if self.match(Tt.VAR):
                 return self.var_declaration()
             return self.statement()
         except ParseError:
             self.synchronize()
+
+    def fun_declaration(self, kind):
+        name = self.consume(Tt.IDENTIFIER, f"expected {kind} name")
+        self.consume(Tt.LEFT_PAREN, "( expected at the beginning of function definition")
+        params = []
+        if not self.check(Tt.RIGHT_PAREN):
+            params.append(self.consume(Tt.IDENTIFIER, "Parameter name expected"))
+            while self.match(Tt.COMMA):
+                if len(params) >= 255:
+                    self.lox.error(self.peek().line, "can't have more than 255 parameters")
+                params.append(self.consume(Tt.IDENTIFIER, "Parameter name expected"))
+
+        self.consume(Tt.RIGHT_PAREN, ") expected at the end of parameter list")
+        self.consume(Tt.LEFT_BRACE, "{ expected at the beginning of function definition")
+
+        body = self.block()
+
+        return Function(name, params, body)
 
     def var_declaration(self):
         name = self.consume(Tt.IDENTIFIER, "expect a variable name")
@@ -94,6 +114,8 @@ class Parser:
             return self.while_statement()
         if self.match(Tt.FOR):
             return self.for_statement()
+        if self.match(Tt.RETURN):
+            return self.return_statement()
         return self.expression_statement()
 
     def print_statement(self):
@@ -153,6 +175,16 @@ class Parser:
             body = Block([initializer, body])
 
         return body
+
+    def return_statement(self):
+        keyword = self.prev()
+        value = None
+        if not self.check(Tt.SEMI):
+            value = self.expression()
+
+        self.consume(Tt.SEMI, "; expected after return")
+
+        return Return(keyword, value)
 
     def expression_statement(self):
         value = self.expression()
@@ -228,7 +260,30 @@ class Parser:
             right = self.unary()
             return Unary(operator, right)
 
-        return self.primary()
+        return self.call()
+
+    def call(self):
+        expr = self.primary()
+
+        while True:
+            if self.match(Tt.LEFT_PAREN):
+                expr = self.finish_call(expr)
+            else:
+                break
+
+        return expr
+
+    def finish_call(self, callee):
+        args = []
+        if not self.check(Tt.RIGHT_PAREN):
+            if len(args) >= 255:
+                self.lox.error(self.peek().line, "can't have more than 255 arguments.")
+            args.append(self.expression())
+            while self.match(Tt.COMMA):
+                args.append(self.expression())
+
+        paren = self.consume(Tt.RIGHT_PAREN, ") expected after argument list")
+        return Call(callee, paren, args)
 
     def primary(self):
         if self.match(Tt.FALSE):

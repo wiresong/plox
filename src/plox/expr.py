@@ -20,6 +20,7 @@ def _makeclass(*args1):
 
 Assign = _makeclass("Assign", "name", "value")
 Binary = _makeclass("Binary", "left", "operator", "right")
+Call = _makeclass("Call", "callee", "paren", "arguments")
 Grouping = _makeclass("Grouping", "expression")
 Literal = _makeclass("Literal", "value")
 Logical = _makeclass("Logical", "left", "operator", "right")

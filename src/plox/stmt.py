@@ -19,7 +19,9 @@ def _makeclass(*args1):
 
 Block = _makeclass("Block", "statements")
 Expression = _makeclass("Expression", "expr")
+Function = _makeclass("Function", "name", "params", "body")
 If = _makeclass("If", "condition", "thenbranch", "elsebranch")
 Print = _makeclass("Print", "expr")
+Return = _makeclass("Return", "Keyword", "value")
 Var = _makeclass("Var", "name", "initializer")
 While = _makeclass("While", "condition", "body")
