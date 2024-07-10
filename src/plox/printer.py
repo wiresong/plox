@@ -9,14 +9,14 @@ class Printer:
         s += ")"
         return s
 
-    def visitBinary(self, expr):
+    def visit_binary(self, expr):
         return self.parenthesize(expr.operator.lexeme, expr.left, expr.right)
 
-    def visitGrouping(self, expr):
+    def visit_grouping(self, expr):
         return self.parenthesize("group", expr.expression)
 
-    def visitLiteral(self, expr):
+    def visit_literal(self, expr):
         return "nil" if expr.value is None else expr.value
 
-    def visitUnary(self, expr):
+    def visit_unary(self, expr):
         return self.parenthesize(expr.operator.lexeme, expr.right)

@@ -12,7 +12,7 @@ def _makeclass(*args1):
             setattr(self, key, value)
 
     def accept(self, visitor):
-        funcname = f"visit{args1[0]}"
+        funcname = f"visit_{args1[0].lower()}"
         return getattr(visitor, funcname)(self)
 
     return type(args1[0], (Expr,), {"__init__": init, "accept": accept})
