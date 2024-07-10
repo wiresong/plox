@@ -13,7 +13,7 @@ class Interpreter:
             return False
         elif type(expr) is bool:
             return expr
-        return False
+        return True
 
     def is_equal(self, a, b):
         return a == b
@@ -53,6 +53,17 @@ class Interpreter:
 
     def visit_variable(self, expr):
         return self.env.get(expr.name)
+
+    def visit_logical(self, expr):
+        left = self.eval(expr.left)
+        if expr.operator.type == Tt.OR:
+            if self.is_truthy(left):
+                return left
+        else:
+            if not self.is_truthy(left):
+                return left
+
+        return self.eval(expr.right)
 
     def visit_binary(self, expr):
         left = self.eval(expr.left)
@@ -121,6 +132,16 @@ class Interpreter:
 
     def visit_block(self, stmt):
         self.eval_block(stmt.statements, Env(self.env))
+
+    def visit_if(self, stmt):
+        if self.is_truthy(self.eval(stmt.condition)):
+            self.eval(stmt.thenbranch)
+        elif stmt.elsebranch is not None:
+            self.eval(stmt.elsebranch)
+
+    def visit_while(self, stmt):
+        while self.is_truthy(self.eval(stmt.condition)):
+            self.eval(stmt.body)
 
     def visit_var(self, stmt):
         value = None

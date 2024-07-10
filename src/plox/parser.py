@@ -1,5 +1,5 @@
-from .stmt import Block, Expression, Print, Var
-from .expr import Assign, Binary, Grouping, Literal, Unary, Variable
+from .stmt import Block, Expression, If, Print, Var, While
+from .expr import Assign, Binary, Grouping, Literal, Logical, Unary, Variable
 from .errors import ParseError
 from .tokenizer import Tt
 
@@ -87,7 +87,13 @@ class Parser:
         if self.match(Tt.PRINT):
             return self.print_statement()
         if self.match(Tt.LEFT_BRACE):
-            return Block(self.block_statement())
+            return Block(self.block())
+        if self.match(Tt.IF):
+            return self.if_statement()
+        if self.match(Tt.WHILE):
+            return self.while_statement()
+        if self.match(Tt.FOR):
+            return self.for_statement()
         return self.expression_statement()
 
     def print_statement(self):
@@ -95,12 +101,58 @@ class Parser:
         self.consume(Tt.SEMI, "expect semi after statement")
         return Print(value)
 
-    def block_statement(self):
+    def block(self):
         statements = []
         while not self.check(Tt.RIGHT_BRACE) and not self.is_at_end():
             statements.append(self.declaration())
         self.consume(Tt.RIGHT_BRACE, "Right brace expected after block.")
         return statements
+
+    def if_statement(self):
+        self.consume(Tt.LEFT_PAREN, "( expected after if")
+        condition = self.expression()
+        self.consume(Tt.RIGHT_PAREN, ") expected at the end of if")
+        thenbranch = self.statement()
+        elsebranch = None
+        if self.match(Tt.ELSE):
+            elsebranch = self.statement()
+        return If(condition, thenbranch, elsebranch)
+
+    def while_statement(self):
+        self.consume(Tt.LEFT_PAREN, "( expected at the beginning of while")
+        condition = self.expression()
+        self.consume(Tt.RIGHT_PAREN, ") expected at the end of while")
+        body = self.statement()
+        return While(condition, body)
+
+    def for_statement(self):
+        self.consume(Tt.LEFT_PAREN, "( expected at the beginning of for")
+        initializer = None
+        if self.match(Tt.VAR):
+            initializer = self.var_declaration()
+        elif self.match(Tt.SEMI):
+            pass
+        else:
+            initializer = self.expression_statement()
+        condition = None
+        if not self.check(Tt.SEMI):
+            condition = self.expression()
+        self.consume(Tt.SEMI, "; expected after for condition")
+        increment = None
+        if not self.check(Tt.RIGHT_PAREN):
+            increment = self.expression()
+        self.match(Tt.RIGHT_PAREN, ") expected at the end of for statement")
+        body = self.statement()
+
+        if increment is not None:
+            body = Block([body, Expression(increment)])
+        if not condition:
+            condition = Literal(True)
+        body = While(condition, body)
+        if initializer is not None:
+            body = Block([initializer, body])
+
+        return body
 
     def expression_statement(self):
         value = self.expression()
@@ -108,7 +160,7 @@ class Parser:
         return Expression(value)
 
     def assignment(self):
-        expr = self.equality()
+        expr = self.or_op()
         if self.match(Tt.EQUAL):
             equals = self.prev()
             value = self.assignment()
@@ -117,6 +169,22 @@ class Parser:
                 return Assign(name, value)
             self.lox.error(equals.line, "Invalid assignment target")
 
+        return expr
+
+    def or_op(self):
+        expr = self.and_op()
+        while self.match(Tt.OR):
+            op = self.prev()
+            right = self.and_op()
+            expr = Logical(expr, op, right)
+        return expr
+
+    def and_op(self):
+        expr = self.equality()
+        while self.match(Tt.AND):
+            op = self.prev()
+            right = self.equality()
+            expr = Logical(expr, op, right)
         return expr
 
     def equality(self):

@@ -19,6 +19,7 @@ class Lox:
     def run_prompt(self):
         while True:
             self.hadError = False
+            self.hadRuntimeError = False
             print(">")
             s = input()
             self.run(s)
