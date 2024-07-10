@@ -1,5 +1,7 @@
 import sys
 
+from .resolver import Resolver
+
 from .interpreter import Interpreter
 from .printer import Printer
 from .parser import Parser
@@ -33,6 +35,10 @@ class Lox:
             return
         if self.hadRuntimeError:
             sys.exit(70)
+        resolver = Resolver(self, self.interpreter)
+        resolver.resolve_statements(statements)
+        if self.hadError:
+            return
         self.interpreter.interpret(statements)
 
     def error(self, line, s):

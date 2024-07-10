@@ -11,6 +11,7 @@ class Interpreter:
         self.g = Env()
         self.g.define("clock", Clock())
         self.env = self.g
+        self.locals = {}
 
     def is_truthy(self, expr):
         if expr is None:
@@ -38,6 +39,13 @@ class Interpreter:
         else:
             return str(value)
 
+    def lookup_variable(self, name, expr):
+        distance = self.locals.get(expr)
+        if distance is not None:
+            return self.env.get_at(distance, name.lexeme)
+        else:
+            return self.g.get(name)
+
     def visit_literal(self, expr):
         return expr.value
 
@@ -61,11 +69,14 @@ class Interpreter:
         if not hasattr(callee, "call"):
             raise RuntimeError(expr.paren, "can only call functions or classes")
         if len(args) != callee.arity():
-            raise RuntimeError(expr.paren, f"wrong argument count: expected {callee.arity()}, got {len(args)}")
+            raise RuntimeError(
+                expr.paren,
+                f"wrong argument count: expected {callee.arity()}, got {len(args)}",
+            )
         return callee.call(self, args)
 
     def visit_variable(self, expr):
-        return self.env.get(expr.name)
+        return self.lookup_variable(expr.name, expr)
 
     def visit_logical(self, expr):
         left = self.eval(expr.left)
@@ -124,7 +135,11 @@ class Interpreter:
 
     def visit_assign(self, expr):
         value = self.eval(expr.value)
-        self.env.assign(expr.name, value)
+        distance = self.locals.get(expr)
+        if distance:
+            self.env.assign_at(distance, expr.name, value)
+        else:
+            self.g.assign(expr.name, value)
         return value
 
     def eval(self, expr):
@@ -138,6 +153,10 @@ class Interpreter:
                 self.eval(statement)
         finally:
             self.env = prev
+
+
+    def resolve(self, expr, depth):
+        self.locals[expr] = depth
 
     def visit_print(self, stmt):
         value = self.eval(stmt.expr)
@@ -162,8 +181,8 @@ class Interpreter:
             value = self.eval(stmt.value)
         raise ReturnError(value)
 
-    def visit_var(self, stmt):
         value = None
+    def visit_var(self, stmt):
         if stmt.initializer is not None:
             value = self.eval(stmt.initializer)
         self.env.define(stmt.name.lexeme, value)
@@ -174,6 +193,7 @@ class Interpreter:
     def visit_function(self, stmt):
         fun = Fun(stmt, self.env)
         self.env.define(stmt.name.lexeme, fun)
+
 
     def interpret(self, statements):
         try:

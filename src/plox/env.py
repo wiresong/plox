@@ -23,4 +23,19 @@ class Env:
         if self.enclosing is not None:
             return self.enclosing.get(name)
 
-        raise RuntimeError(name, f"Attepmt to access undefined variable {name.lexeme}")
+        raise RuntimeError(name, f"Attempt to access undefined variable {name.lexeme}")
+
+    def get_at(self, distance, name):
+        env = self.ancestor(distance)
+        return env.dict[name]
+
+    def assign_at(self, distance, name, value):
+        env = self.ancestor(distance)
+        env.dict[name] = value
+
+    def ancestor(self, distance):
+        env = self
+        for _ in range(distance):
+            env = env.enclosing
+        return env
+    
