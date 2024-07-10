@@ -1,3 +1,5 @@
+from .printer import Printer
+from .parser import Parser
 from .tokenizer import Tokenizer
 
 
@@ -17,9 +19,13 @@ class Lox:
 
     def run(self, s):
         # Todo reuse tokenizer
+        self.hadError = False
         tokens = Tokenizer(self, s).tokenize()
-        for token in tokens:
-            print(token)
+        parser = Parser(self, tokens)
+        expr = parser.parse()
+        if self.hadError:
+            return
+        print(Printer().print(expr))
 
     def error(self, line, s):
         self.hadError = True

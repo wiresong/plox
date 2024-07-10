@@ -190,7 +190,7 @@ class Tokenizer:
             case " " | "\r" | "\t":
                 return
             case "\n":
-                self.line + +1
+                self.line += 1
             case '"':
                 while self.peek() != '"' and not self.is_at_end():
                     if self.peek() == "\n":
@@ -206,7 +206,7 @@ class Tokenizer:
                     Tt.STRING,
                     # Strip off the quotes
                     self.source[self.start + 1 : self.current - 1],
-                    None,
+                    self.source[self.start + 1 : self.current - 1],
                     self.line,
                 )
 
@@ -222,8 +222,8 @@ class Tokenizer:
 
                     return Token(
                         Tt.NUMBER,
+                        self.source[self.start : self.current],
                         float(self.source[self.start : self.current]),
-                        None,
                         self.line,
                     )
 
@@ -235,7 +235,7 @@ class Tokenizer:
                             self.source[self.start : self.current], Tt.IDENTIFIER
                         ),
                         self.source[self.start : self.current],
-                        "",
+                        self.source[self.start : self.current],
                         self.line,
                     )
 
