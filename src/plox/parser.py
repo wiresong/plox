@@ -22,6 +22,7 @@ class Parser:
     def consume(self, t, message):
         if self.check(t):
             self.advance()
+            return
         raise self.error(self.peek(), message)
 
     def error(self, token, message):
