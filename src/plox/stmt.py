@@ -1,4 +1,4 @@
-class Expr:
+class Stmt:
     pass
 
 
@@ -7,7 +7,7 @@ class Expr:
 # The function generates a class accepting those parameters, as well as an accept method for the visitor pattern
 def _makeclass(*args1):
     def init(self, *args2):
-        super(Expr, self).__init__()
+        super(Stmt, self).__init__()
         for key, value in zip(args1[1:], args2):
             setattr(self, key, value)
 
@@ -15,12 +15,9 @@ def _makeclass(*args1):
         funcname = f"visit_{args1[0].lower()}"
         return getattr(visitor, funcname)(self)
 
-    return type(args1[0], (Expr,), {"__init__": init, "accept": accept})
+    return type(args1[0], (Stmt,), {"__init__": init, "accept": accept})
 
-
-Assign = _makeclass("Assign", "name", "value")
-Binary = _makeclass("Binary", "left", "operator", "right")
-Grouping = _makeclass("Grouping", "expression")
-Literal = _makeclass("Literal", "value")
-Unary = _makeclass("Unary", "operator", "right")
-Variable = _makeclass("Variable", "name")
+Block = _makeclass("Block", "statements")
+Expression = _makeclass("Expression", "expr")
+Print = _makeclass("Print", "expr")
+Var = _makeclass("Var", "name", "initializer")

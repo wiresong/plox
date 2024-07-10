@@ -14,7 +14,7 @@ class Lox:
 
     def run_file(self, file):
         with open(file, encoding="utf-8") as f:
-            self.run(f)
+            self.run(f.read())
 
     def run_prompt(self):
         while True:
@@ -27,12 +27,12 @@ class Lox:
         # Todo reuse tokenizer
         tokens = Tokenizer(self, s).tokenize()
         parser = Parser(self, tokens)
-        expr = parser.parse()
+        statements = parser.parse()
         if self.hadError:
             return
         if self.hadRuntimeError:
             sys.exit(70)
-        self.interpreter.interpret(expr)
+        self.interpreter.interpret(statements)
 
     def error(self, line, s):
         self.hadError = True

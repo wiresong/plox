@@ -1,15 +1,12 @@
+from .env import Env
+from .errors import RuntimeError
 from .tokenizer import Tt
-
-
-class RuntimeError(Exception):
-    def __init__(self, token, msg):
-        super().__init__(msg)
-        self.token = token
 
 
 class Interpreter:
     def __init__(self, lox):
         self.lox = lox
+        self.env = Env()
 
     def is_truthy(self, expr):
         if expr is None:
@@ -54,6 +51,9 @@ class Interpreter:
         elif expr.operator.type == Tt.BANG:
             return not self.is_truthy(right)
 
+    def visit_variable(self, expr):
+        return self.env.get(expr.name)
+
     def visit_binary(self, expr):
         left = self.eval(expr.left)
         op = expr.operator
@@ -72,15 +72,15 @@ class Interpreter:
                     )
             case Tt.MINUS:
                 self.raise_if_not_numbers(op, left, right)
-                return left-right
+                return left - right
             case Tt.SLASH:
                 self.raise_if_not_numbers(op, left, right)
                 if right == 0.0:
                     raise RuntimeError(op, "Division by 0")
-                return left/right
+                return left / right
             case Tt.STAR:
                 self.raise_if_not_numbers(op, left, right)
-                return left*right
+                return left * right
             case Tt.GREATER:
                 self.raise_if_not_numbers(op, left, right)
                 return left > right
@@ -98,12 +98,42 @@ class Interpreter:
             case Tt.EQUAL_EQUAL:
                 return self.is_equal(left, right)
 
+    def visit_assign(self, expr):
+        value = self.eval(expr.value)
+        self.env.assign(expr.name, value)
+        return value
+
     def eval(self, expr):
         return expr.accept(self)
 
-    def interpret(self, expr):
+    def eval_block(self, statements, env):
+        prev = self.env
         try:
-            val = self.eval(expr)
-            print(self.stringify(val))
+            self.env = env
+            for statement in statements:
+                self.eval(statement)
+        finally:
+            self.env = prev
+
+    def visit_print(self, stmt):
+        value = self.eval(stmt.expr)
+        print(self.stringify(value))
+
+    def visit_block(self, stmt):
+        self.eval_block(stmt.statements, Env(self.env))
+
+    def visit_var(self, stmt):
+        value = None
+        if stmt.initializer is not None:
+            value = self.eval(stmt.initializer)
+        self.env.define(stmt.name.lexeme, value)
+
+    def visit_expression(self, stmt):
+        self.eval(stmt.expr)
+
+    def interpret(self, statements):
+        try:
+            for statement in statements:
+                self.eval(statement)
         except RuntimeError as e:
             self.lox.runtime_error(e)
