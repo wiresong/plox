@@ -38,4 +38,3 @@ class Env:
         for _ in range(distance):
             env = env.enclosing
         return env
-    

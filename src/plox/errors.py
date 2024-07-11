@@ -7,6 +7,7 @@ class RuntimeError(Exception):
         super().__init__(msg)
         self.token = token
 
+
 # Not exactly an error, just a way to jump out of a deep call stack
 class ReturnError(Exception):
     def __init__(self, value):

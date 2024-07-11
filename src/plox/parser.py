@@ -8,6 +8,7 @@ from .expr import (
     Literal,
     Logical,
     Set,
+    Super,
     This,
     Unary,
     Variable,
@@ -93,12 +94,16 @@ class Parser:
 
     def class_declaration(self):
         name = self.consume(Tt.IDENTIFIER, "class name expected")
+        superclass = None
+        if self.match(Tt.LESS):
+            self.consume(Tt.IDENTIFIER, "Superclass name expected")
+            superclass = Variable(self.prev())
         self.consume(Tt.LEFT_BRACE, "{ expected at the beginning of class declaration")
         methods = []
         while not self.is_at_end() and not self.check(Tt.RIGHT_BRACE):
             methods.append(self.fun_declaration("method"))
         self.consume(Tt.RIGHT_BRACE, "} expected after class declaration")
-        return Class(name, methods)
+        return Class(name, superclass, methods)
 
     def fun_declaration(self, kind):
         name = self.consume(Tt.IDENTIFIER, f"expected {kind} name")
@@ -330,6 +335,12 @@ class Parser:
 
         if self.match(Tt.NUMBER, Tt.STRING):
             return Literal(self.prev().literal)
+
+        if self.match(Tt.SUPER):
+            keyword = self.prev()
+            self.consume(Tt.DOT, ". expected after super")
+            method = self.consume(Tt.IDENTIFIER, "superclass name expected")
+            return Super(keyword, method)
 
         if self.match(Tt.THIS):
             return This(self.prev())

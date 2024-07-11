@@ -30,8 +30,9 @@ class Resolver:
             if scope.get(name.lexeme):
                 self.interpreter.resolve(expr, idx)
 
-    def visit_block(self, stmt):
         self.begin_scope()
+
+    def visit_block(self, stmt):
         self.resolve_statements(stmt.statements)
         self.end_scope()
 
@@ -40,6 +41,14 @@ class Resolver:
         self.current_class = "class"
         self.declare(stmt.name)
         self.define(stmt.name)
+        if stmt.superclass is not None:
+            if stmt.name.lexeme == stmt.superclass.name.lexeme:
+                self.lox.error(stmt.superclass.name.line, "can't inherit from self")
+            self.current_class = "subclass"
+            self.resolve(stmt.superclass)
+            self.begin_scope()
+            self.scopes[-1]["super"] = True
+
         self.begin_scope()
         self.scopes[-1]["this"] = True
         for method in stmt.methods:
@@ -48,6 +57,8 @@ class Resolver:
                 declaration = "initializer"
             self.resolve_function(method, declaration)
         self.end_scope()
+        if stmt.superclass is not None:
+            self.end_scope()
         self.current_class = enclosing
 
     def visit_var(self, stmt):
@@ -129,6 +140,16 @@ class Resolver:
     def visit_set(self, expr):
         self.resolve(expr.value)
         self.resolve(expr.object)
+
+    def visit_super(self, expr):
+        if self.current_class is None:
+            self.lox.error(expr.keyword.line, "can't use super outside class")
+        elif self.current_class == "class":
+            self.lox.error(
+                expr.keyword.line, "can't use super in class without superclass"
+            )
+
+        self.resolve_local(expr, expr.keyword)
 
     def visit_this(self, expr):
         if not self.current_class:

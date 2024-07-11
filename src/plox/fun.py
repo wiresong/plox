@@ -13,7 +13,7 @@ class Fun:
 
     def call(self, interpreter, args):
         env = Env(self.closure)
-        for (param, arg) in zip(self.declaration.params, args):
+        for param, arg in zip(self.declaration.params, args):
             env.define(param.lexeme, arg)
         try:
             interpreter.eval_block(self.declaration.body, env)
@@ -32,4 +32,3 @@ class Fun:
 
     def __repr__(self):
         return f"<fn {self.declaration.name}>"
-

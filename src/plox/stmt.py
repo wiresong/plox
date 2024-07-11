@@ -17,8 +17,9 @@ def _makeclass(*args1):
 
     return type(args1[0], (Stmt,), {"__init__": init, "accept": accept})
 
+
 Block = _makeclass("Block", "statements")
-Class = _makeclass("Class", "name", "methods")
+Class = _makeclass("Class", "name", "superclass", "methods")
 Expression = _makeclass("Expression", "expr")
 Function = _makeclass("Function", "name", "params", "body")
 If = _makeclass("If", "condition", "thenbranch", "elsebranch")
