@@ -30,8 +30,6 @@ class Resolver:
             if scope.get(name.lexeme):
                 self.interpreter.resolve(expr, idx)
 
-        self.begin_scope()
-
     def visit_block(self, stmt):
         self.resolve_statements(stmt.statements)
         self.end_scope()
