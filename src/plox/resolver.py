@@ -7,11 +7,9 @@ class Resolver:
         self.current_class = None
 
     def begin_scope(self):
-        print(f"Beginning scope, previously: {self.scopes}")
         self.scopes.append({})
 
     def end_scope(self):
-        print(f"Ending scope, previously: {self.scopes}")
         self.scopes.pop()
 
     def declare(self, name):

@@ -1,3 +1,18 @@
+// functions, control flow, recursion
+fun factorial(n) {
+  var res = 1;
+  for (var i = 2; i <= n; i = i + 1) {
+    res = res*i;
+  }
+  return res;
+}
+
+fun fib(n) {
+  if (n==0) return 0;
+  if (n==1) return 1;
+  return fib(n-1)+fib(n-2);
+}
+
 // Classes
 class Rectangle {
   init(x, y) {
@@ -17,7 +32,8 @@ class Square < Rectangle {
   }
 }
 
-// Functions, closures, lexical scope
+// Closures, lexical scope
+
 // A function which returns functions which build rectangles with a constant x
 fun x_rectangle(x) {
   fun y_rectangle(y) {
@@ -28,6 +44,8 @@ fun x_rectangle(x) {
 }
 
 fun main() {
+  print factorial(5);
+  print fib(10);
   // Rectangle
   var a = Rectangle(5, 10);
 
