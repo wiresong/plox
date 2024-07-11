@@ -1,0 +1,57 @@
+// Classes
+class Rectangle {
+  init(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  perimeter() {
+    return this.x*this.y;
+  }
+}
+
+// Inheritence
+class Square < Rectangle {
+  init(side) {
+    super.init(side, side);
+  }
+}
+
+// Functions, closures, lexical scope
+// A function which returns functions which build rectangles with a constant x
+fun x_rectangle(x) {
+  fun y_rectangle(y) {
+    return Rectangle(x, y);
+  }
+
+  return y_rectangle;
+}
+
+fun main() {
+  // Rectangle
+  var a = Rectangle(5, 10);
+
+  // Square
+  var b = Square(5);
+
+  // Rectangles where x is always 3
+  var three_rectangle = x_rectangle(3);
+
+  var c = three_rectangle(4);
+  var d = three_rectangle(5);
+
+  // printing
+  print "Perimeter of rectangle(5, 10) is:";
+  print a.perimeter();
+
+  print "Perimeter of square(5) is:";
+  print b.perimeter();
+
+  print "Perimeter of rectangle(3, 4) is:";
+  print c.perimeter();
+
+  print "Perimeter of rectangle(3, 5) is:";
+  print d.perimeter();
+}
+
+main();
