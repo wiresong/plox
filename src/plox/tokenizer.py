@@ -28,6 +28,26 @@ class Tokenizer:
         self.source = source
         self.source_len = len(self.source)
 
+        self.singles = {
+            "(": Tt.LEFT_PAREN,
+            ")": Tt.RIGHT_PAREN,
+            "{": Tt.LEFT_BRACE,
+            "}": Tt.RIGHT_BRACE,
+            ",": Tt.COMMA,
+            ".": Tt.DOT,
+            "+": Tt.PLUS,
+            "-": Tt.MINUS,
+            ";": Tt.SEMI,
+            "*": Tt.STAR,
+        }
+
+        self.doubles = {
+            "!": ("=", Tt.BANG_EQUAL, Tt.BANG),
+            "=": ("=", Tt.EQUAL_EQUAL, Tt.EQUAL),
+            "<": ("=", Tt.LESS_EQUAL, Tt.LESS),
+            ">": ("=", Tt.GREATER_EQUAL, Tt.GREATER),
+        }
+
         self.keywords = {
             "and": Tt.AND,
             "class": Tt.CLASS,
@@ -75,169 +95,93 @@ class Tokenizer:
         self.advance()
         return True
 
+    def one_char(self):
+        char = self.advance()
+        return Token(self.singles[char], self.source[self.start:self.current], None, self.line)
+
+    def two_chars(self):
+        char = self.advance()
+        tup = self.doubles[char]
+        return Token(tup[1] if self.match(tup[0]) else tup[2], self.source[self.start:self.current], None, self.line)
+
+    def comment(self):
+        if self.match("/"):
+            while self.peek() != "\n" and not self.is_at_end():
+                self.advance()
+        else:
+            return Token(
+                Tt.SLASH,
+                self.source[self.start : self.current],
+                None,
+                self.line,
+            )
+
+    def string(self):
+        while self.peek() != '"' and not self.is_at_end():
+            if self.peek() == "\n":
+                self.line += 1
+            self.advance()
+
+        if self.is_at_end():
+            self.lox.error(self.line, "unterminated string")
+            return
+
+        self.advance()  # closing quote
+        return Token(
+            Tt.STRING,
+            # Strip off the quotes
+            self.source[self.start + 1 : self.current - 1],
+            self.source[self.start + 1 : self.current - 1],
+            self.line,
+        )
+
+    def number(self):
+        while self.peek().isdigit():
+            self.advance()
+
+        if self.peek() == "." and self.peek2().isdigit():
+            self.advance()
+            while self.peek().isdigit():
+                self.advance()
+
+        return Token(
+            Tt.NUMBER,
+            self.source[self.start : self.current],
+            float(self.source[self.start : self.current]),
+            self.line,
+        )
+
+    def identifier(self):
+        while self.peek().isalnum() or self.peek() == "_":
+            self.advance()
+        return Token(
+            self.keywords.get(
+                self.source[self.start : self.current], Tt.IDENTIFIER
+            ),
+            self.source[self.start : self.current],
+            self.source[self.start : self.current],
+            self.line,
+        )
+
     def get_next_token(self):
+        if self.peek() in self.singles:
+            return self.one_char()
+        if self.peek() in self.doubles:
+            return self.two_chars()
         match self.advance():
-            case "(":
-                return Token(
-                    Tt.LEFT_PAREN,
-                    self.source[self.start : self.current],
-                    None,
-                    self.line,
-                )
-            case ")":
-                return Token(
-                    Tt.RIGHT_PAREN,
-                    self.source[self.start : self.current],
-                    None,
-                    self.line,
-                )
-            case "{":
-                return Token(
-                    Tt.LEFT_BRACE,
-                    self.source[self.start : self.current],
-                    None,
-                    self.line,
-                )
-            case "}":
-                return Token(
-                    Tt.RIGHT_BRACE,
-                    self.source[self.start : self.current],
-                    None,
-                    self.line,
-                )
-            case ",":
-                return Token(
-                    Tt.COMMA,
-                    self.source[self.start : self.current],
-                    None,
-                    self.line,
-                )
-            case ".":
-                return Token(
-                    Tt.DOT,
-                    self.source[self.start : self.current],
-                    None,
-                    self.line,
-                )
-            case "-":
-                return Token(
-                    Tt.MINUS,
-                    self.source[self.start : self.current],
-                    None,
-                    self.line,
-                )
-            case "+":
-                return Token(
-                    Tt.PLUS,
-                    self.source[self.start : self.current],
-                    None,
-                    self.line,
-                )
-            case ";":
-                return Token(
-                    Tt.SEMI,
-                    self.source[self.start : self.current],
-                    None,
-                    self.line,
-                )
-            case "*":
-                return Token(
-                    Tt.STAR,
-                    self.source[self.start : self.current],
-                    None,
-                    self.line,
-                )
-            case "!":
-                return Token(
-                    Tt.BANG_EQUAL if self.match("=") else Tt.BANG,
-                    self.source[self.start : self.current],
-                    None,
-                    self.line,
-                )
-            case "=":
-                return Token(
-                    Tt.EQUAL_EQUAL if self.match("=") else Tt.EQUAL,
-                    self.source[self.start : self.current],
-                    None,
-                    self.line,
-                )
-            case "<":
-                return Token(
-                    Tt.LESS_EQUAL if self.match("=") else Tt.LESS,
-                    self.source[self.start : self.current],
-                    None,
-                    self.line,
-                )
-            case ">":
-                return Token(
-                    Tt.GREATER_EQUAL if self.match("=") else Tt.GREATER,
-                    self.source[self.start : self.current],
-                    None,
-                    self.line,
-                )
             case "/":
-                if self.match("/"):
-                    while self.peek() != "\n" and not self.is_at_end():
-                        self.advance()
-                else:
-                    return Token(
-                        Tt.SLASH,
-                        self.source[self.start : self.current],
-                        None,
-                        self.line,
-                    )
+                return self.comment()
+            case '"':
+                return self.string()
             case " " | "\r" | "\t":
                 return
             case "\n":
                 self.line += 1
-            case '"':
-                while self.peek() != '"' and not self.is_at_end():
-                    if self.peek() == "\n":
-                        self.line += 1
-                    self.advance()
-
-                if self.is_at_end():
-                    self.lox.error(self.line, "unterminated string")
-                    return
-
-                self.advance()  # closing quote
-                return Token(
-                    Tt.STRING,
-                    # Strip off the quotes
-                    self.source[self.start + 1 : self.current - 1],
-                    self.source[self.start + 1 : self.current - 1],
-                    self.line,
-                )
-
             case s:
                 if s.isdigit():
-                    while self.peek().isdigit():
-                        self.advance()
-
-                    if self.peek() == "." and self.peek2().isdigit():
-                        self.advance()
-                        while self.peek().isdigit():
-                            self.advance()
-
-                    return Token(
-                        Tt.NUMBER,
-                        self.source[self.start : self.current],
-                        float(self.source[self.start : self.current]),
-                        self.line,
-                    )
-
+                    return self.number()
                 elif s.isalpha() or s == "_":
-                    while self.peek().isalnum() or self.peek() == "_":
-                        self.advance()
-                    return Token(
-                        self.keywords.get(
-                            self.source[self.start : self.current], Tt.IDENTIFIER
-                        ),
-                        self.source[self.start : self.current],
-                        self.source[self.start : self.current],
-                        self.line,
-                    )
-
+                    return self.identifier()
                 else:
                     self.lox.error(self.line, "Invalid lexeme.")
 
