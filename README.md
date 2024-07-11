@@ -2,7 +2,7 @@
 Plox is a Python port of Lox, an object-oriented, single-inheritance, lexically-scoped language from [Crafting Interpreters](https://craftinginterpreters.com/).
 
 ## Running the code
-Plox currently uses [Rye](https://rye.astral.sh/) as the package manager, although anything supporting pyproject.toml should work. To run the REPL, use ``rye run plox``, and to run a file, use `rye run plox <file>``. The main directory holds example.lox, which should demonstrate some of the languages' features.
+Plox currently uses [Rye](https://rye.astral.sh/) as the package manager, although anything supporting pyproject.toml should work. To run the REPL, use ``rye run plox``, and to run a file, use ``rye run plox <file>``. The main directory holds example.lox, which should demonstrate some of the languages' features.
 
 ## Code structure
 All code files live in the src/plox directory.
