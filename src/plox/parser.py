@@ -1,6 +1,18 @@
-from .stmt import Block, Expression, Function, If, Print, Return, Var, While
-from .expr import Assign, Binary, Call, Grouping, Literal, Logical, Unary, Variable
 from .errors import ParseError
+from .expr import (
+    Assign,
+    Binary,
+    Call,
+    Get,
+    Grouping,
+    Literal,
+    Logical,
+    Set,
+    This,
+    Unary,
+    Variable,
+)
+from .stmt import Block, Class, Expression, Function, If, Print, Return, Var, While
 from .tokenizer import Tt
 
 
@@ -69,6 +81,8 @@ class Parser:
 
     def declaration(self):
         try:
+            if self.match(Tt.CLASS):
+                return self.class_declaration()
             if self.match(Tt.FUN):
                 return self.fun_declaration("function")
             if self.match(Tt.VAR):
@@ -77,19 +91,34 @@ class Parser:
         except ParseError:
             self.synchronize()
 
+    def class_declaration(self):
+        name = self.consume(Tt.IDENTIFIER, "class name expected")
+        self.consume(Tt.LEFT_BRACE, "{ expected at the beginning of class declaration")
+        methods = []
+        while not self.is_at_end() and not self.check(Tt.RIGHT_BRACE):
+            methods.append(self.fun_declaration("method"))
+        self.consume(Tt.RIGHT_BRACE, "} expected after class declaration")
+        return Class(name, methods)
+
     def fun_declaration(self, kind):
         name = self.consume(Tt.IDENTIFIER, f"expected {kind} name")
-        self.consume(Tt.LEFT_PAREN, "( expected at the beginning of function definition")
+        self.consume(
+            Tt.LEFT_PAREN, "( expected at the beginning of function definition"
+        )
         params = []
         if not self.check(Tt.RIGHT_PAREN):
             params.append(self.consume(Tt.IDENTIFIER, "Parameter name expected"))
             while self.match(Tt.COMMA):
                 if len(params) >= 255:
-                    self.lox.error(self.peek().line, "can't have more than 255 parameters")
+                    self.lox.error(
+                        self.peek().line, "can't have more than 255 parameters"
+                    )
                 params.append(self.consume(Tt.IDENTIFIER, "Parameter name expected"))
 
         self.consume(Tt.RIGHT_PAREN, ") expected at the end of parameter list")
-        self.consume(Tt.LEFT_BRACE, "{ expected at the beginning of function definition")
+        self.consume(
+            Tt.LEFT_BRACE, "{ expected at the beginning of function definition"
+        )
 
         body = self.block()
 
@@ -199,6 +228,9 @@ class Parser:
             if type(expr) is Variable:
                 name = expr.name
                 return Assign(name, value)
+            elif type(expr) is Get:
+                get = expr
+                return Set(get.object, get.name, value)
             self.lox.error(equals.line, "Invalid assignment target")
 
         return expr
@@ -268,6 +300,9 @@ class Parser:
         while True:
             if self.match(Tt.LEFT_PAREN):
                 expr = self.finish_call(expr)
+            elif self.match(Tt.DOT):
+                name = self.consume(Tt.IDENTIFIER, "property name expected after .")
+                expr = Get(expr, name)
             else:
                 break
 
@@ -295,6 +330,9 @@ class Parser:
 
         if self.match(Tt.NUMBER, Tt.STRING):
             return Literal(self.prev().literal)
+
+        if self.match(Tt.THIS):
+            return This(self.prev())
 
         if self.match(Tt.IDENTIFIER):
             return Variable(self.prev())

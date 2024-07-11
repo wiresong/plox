@@ -4,6 +4,7 @@ class Resolver:
         self.interpreter = interpreter
         self.scopes = []
         self.current_function = None
+        self.current_class = None
 
     def begin_scope(self):
         self.scopes.append({})
@@ -33,6 +34,21 @@ class Resolver:
         self.begin_scope()
         self.resolve_statements(stmt.statements)
         self.end_scope()
+
+    def visit_class(self, stmt):
+        enclosing = self.current_class
+        self.current_class = "class"
+        self.declare(stmt.name)
+        self.define(stmt.name)
+        self.begin_scope()
+        self.scopes[-1]["this"] = True
+        for method in stmt.methods:
+            declaration = "method"
+            if method.name.lexeme == "init":
+                declaration = "initializer"
+            self.resolve_function(method, declaration)
+        self.end_scope()
+        self.current_class = enclosing
 
     def visit_var(self, stmt):
         self.declare(stmt.name)
@@ -86,6 +102,8 @@ class Resolver:
         if not self.current_function:
             self.lox.error(stmt.keyword, "can't return from top-level code")
         if stmt.value is not None:
+            if self.current_function == "initializer":
+                self.lox.error(stmt.keyword, "can't return from initializer")
             self.resolve(stmt.value)
 
     def visit_while(self, stmt):
@@ -104,6 +122,18 @@ class Resolver:
         self.resolve(expr.callee)
         for arg in expr.arguments:
             self.resolve(arg)
+
+    def visit_get(self, expr):
+        self.resolve(expr.object)
+
+    def visit_set(self, expr):
+        self.resolve(expr.value)
+        self.resolve(expr.object)
+
+    def visit_this(self, expr):
+        if not self.current_class:
+            return self.lox.error(expr.keyword.line, "Can't use 'this' outside class")
+        self.resolve_local(expr, expr.keyword)
 
     def visit_grouping(self, expr):
         self.resolve(expr.expression)

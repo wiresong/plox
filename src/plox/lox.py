@@ -1,10 +1,9 @@
 import sys
 
-from .resolver import Resolver
-
 from .interpreter import Interpreter
-from .printer import Printer
 from .parser import Parser
+from .printer import Printer
+from .resolver import Resolver
 from .tokenizer import Tokenizer
 
 

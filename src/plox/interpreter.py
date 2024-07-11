@@ -1,7 +1,8 @@
-from .fun import Fun
 from .builtins import Clock
+from .classes import LoxClass, LoxInstance
 from .env import Env
 from .errors import ReturnError, RuntimeError
+from .fun import Fun
 from .tokenizer import Tt
 
 
@@ -74,6 +75,24 @@ class Interpreter:
                 f"wrong argument count: expected {callee.arity()}, got {len(args)}",
             )
         return callee.call(self, args)
+
+    def visit_get(self, expr):
+        ob = self.eval(expr.object)
+        if not isinstance(ob, LoxInstance):
+            raise RuntimeError(expr.name, "only instances have properties")
+        else:
+            return ob.get(expr.name)
+
+    def visit_set(self, expr):
+        ob = self.eval(expr.object)
+        if not isinstance(ob, LoxInstance):
+            raise RuntimeError(expr.name, "can only set properties on instances")
+        value = self.eval(expr.value)
+        ob.set(expr.name, value)
+        return value
+
+    def visit_this(self, expr):
+        return self.lookup_variable(expr.keyword, expr)
 
     def visit_variable(self, expr):
         return self.lookup_variable(expr.name, expr)
@@ -154,7 +173,6 @@ class Interpreter:
         finally:
             self.env = prev
 
-
     def resolve(self, expr, depth):
         self.locals[expr] = depth
 
@@ -164,6 +182,15 @@ class Interpreter:
 
     def visit_block(self, stmt):
         self.eval_block(stmt.statements, Env(self.env))
+
+    def visit_class(self, stmt):
+        self.env.define(stmt.name.lexeme, None)
+        methods = {}
+        for method in stmt.methods:
+            fun = Fun(method, self.env, method.name.lexeme=="init")
+            methods[method.name.lexeme] = fun
+        c = LoxClass(stmt.name.lexeme, methods)
+        self.env.assign(stmt.name, c)
 
     def visit_if(self, stmt):
         if self.is_truthy(self.eval(stmt.condition)):
@@ -182,6 +209,7 @@ class Interpreter:
         raise ReturnError(value)
 
         value = None
+
     def visit_var(self, stmt):
         if stmt.initializer is not None:
             value = self.eval(stmt.initializer)
@@ -191,9 +219,8 @@ class Interpreter:
         self.eval(stmt.expr)
 
     def visit_function(self, stmt):
-        fun = Fun(stmt, self.env)
+        fun = Fun(stmt, self.env, False)
         self.env.define(stmt.name.lexeme, fun)
-
 
     def interpret(self, statements):
         try:
